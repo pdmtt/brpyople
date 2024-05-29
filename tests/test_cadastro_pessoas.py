@@ -39,3 +39,18 @@ def test_registro_invalido(identificador_invalido_e_cadastro) -> None:
     assert registro.cadastro_pessoas == identificador_invalido_e_cadastro[1]
     assert not registro.identificador_valido
     assert registro.razao_invalidez_identificador == 'Dígitos verificadores inválidos'
+
+
+@pytest.fixture(params=[
+    ('00000000', 1, '00.000.000/0001-91'),
+    ('00000000', 2, '00.000.000/0002-72'),
+])
+def cnpj_raiz_estabelecimento_resultado(request) -> tuple[str, int, str]:
+    return request.param
+
+
+def test_registro_estabelecimento_com_raiz_cnpj(cnpj_raiz_estabelecimento_resultado):
+    assert Registro.estabelecimento_com_raiz_cnpj(
+        raiz=cnpj_raiz_estabelecimento_resultado[0],
+        estabelecimento=cnpj_raiz_estabelecimento_resultado[1]
+    ).identificador_formatado == cnpj_raiz_estabelecimento_resultado[2]

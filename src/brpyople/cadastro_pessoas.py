@@ -32,7 +32,7 @@ class Registro:
 
         if (
                 len(re.sub(r'[^a-zA-Z]', '', _identificador)) > 0
-                or len(self.digitos_identificador) not in (8, 11, 14)
+                or len(self.digitos_identificador) not in (11, 14)
         ):
             self.identificador_valido = False
             self.razao_invalidez_identificador = (
@@ -48,33 +48,74 @@ class Registro:
                 self.digitos_identificador[6:9]
             )) + '-' + self.digitos_identificador[9:11]
 
-            digitos_preditores = self.digitos_identificador[:-2]
+            identificador_valido = self.digitos_identificador[:-2]
             for dv in (0, 1):
                 soma = 0
-                for char, multiplicador in zip(digitos_preditores[dv:], range(10, 1, -1)):
+                for char, multiplicador in zip(identificador_valido[dv:], range(10, 1, -1)):
                     soma += int(char) * multiplicador
                 resto = soma % 11
-                digitos_preditores += str(11 - resto if resto > 1 else 0)
+                identificador_valido += str(11 - resto if resto > 1 else 0)
 
         else:  # CNPJ
             self.cadastro_pessoas = Especies.CNPJ
+
+            estabelecimento = self.digitos_identificador[8:12]
             self.identificador_formatado = '.'.join((
                 self.digitos_identificador[:2],
                 self.digitos_identificador[2:5],
                 self.digitos_identificador[5:8]
-            )) + f'/{self.digitos_identificador[8:12]}-{self.digitos_identificador[12:]}'
+            )) + f'/{estabelecimento}-{self.digitos_identificador[12:]}'
 
-            digitos_preditores = self.digitos_identificador[:12]
-            for _ in (1, 2):
-                mult, soma = 9, 0
-                for c in digitos_preditores[::-1]:
-                    soma += int(c) * mult
-                    mult = mult - 1 if mult > 2 else 9
-                resto = soma % 11
-                digitos_preditores += str(resto if resto != 10 else 0)
+            identificador_valido = (
+                self.digitos_identificador[:12]
+                + self._digitos_verificadores_identificador_registro_cnpj(
+                    raiz=self.digitos_identificador[:8],
+                    estabelecimento=int(estabelecimento)
+                )
+            )
 
-        if digitos_preditores == self.digitos_identificador:
+        if identificador_valido == self.digitos_identificador:
             self.identificador_valido = True
         else:
             self.identificador_valido = False
             self.razao_invalidez_identificador = "Dígitos verificadores inválidos"
+
+    @staticmethod
+    def _digitos_verificadores_identificador_registro_cnpj(raiz: str, estabelecimento: int) -> str:
+        """Retorna os dígitos verificadores do CNPJ passado."""
+        digitos_preditores = str(raiz) + str(estabelecimento).zfill(4)
+        if len(digitos_preditores) != 12 or not digitos_preditores.isdigit():
+            raise ValueError('É necessário um texto contendo apenas 12 dígitos exatamente')
+
+        for _ in (1, 2):
+            mult, soma = 9, 0
+            for c in digitos_preditores[::-1]:
+                soma += int(c) * mult
+                mult = mult - 1 if mult > 2 else 9
+            resto = soma % 11
+            digitos_preditores += str(resto if resto != 10 else 0)
+
+        return digitos_preditores[-2:]
+
+    @classmethod
+    def estabelecimento_com_raiz_cnpj(cls, raiz: str, estabelecimento: int = 1) -> "Registro":
+        """
+        Factory que retorna um Registro válido do CNPJ contendo a raiz e o estabelecimento passados:
+
+        ('00.000.000', 1) → <Registro('00.000.000/0001-91')>.
+
+        Os identificadores dos registros do CNPJ seguem o padrão "RR.RRR.RRR/MMMM-VV".
+        Os oitos primeiros dígitos ("R") consistem na "raiz" do identificador.
+        Os quatro seguintes ("M"), "estabelecimento".
+        Os dois últimos ("V"), "dígitos verificadores".
+
+        O estabelecimento "0001" sempre é a matriz/sede e os demais, filiais.
+        """
+        if int(estabelecimento) < 1:
+            raise ValueError('Não existe estabelecimento menor que 1')
+
+        return cls(
+                raiz
+                + str(estabelecimento).zfill(4)
+                + cls._digitos_verificadores_identificador_registro_cnpj(raiz, estabelecimento)
+        )
