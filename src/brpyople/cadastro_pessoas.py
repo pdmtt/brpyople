@@ -34,6 +34,7 @@ class Registro:
                 len(re.sub(r'[^a-zA-Z]', '', _identificador)) > 0
                 or len(self.digitos_identificador) not in (11, 14)
         ):
+            self.cadastro_pessoas = None
             self.identificador_valido = False
             self.razao_invalidez_identificador = (
                 f'Argumento "{_identificador}" contém ou caracteres alfabéticos, ou uma quantidade '
