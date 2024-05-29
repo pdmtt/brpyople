@@ -39,6 +39,7 @@ class Registro:
                 f'Argumento "{_identificador}" contém ou caracteres alfabéticos, ou uma quantidade '
                 'inadequada de dígitos'
             )
+            return
 
         if len(self.digitos_identificador) == 11:  # CPF
             self.cadastro_pessoas = Especies.CPF
