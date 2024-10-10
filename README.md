@@ -14,7 +14,7 @@ True
 >>> cpf_valido.identificador_formatado
 '070.680.938-68'
 >>> cpf_valido.cadastro_pessoas
-<Especies.CPF: 1>
+<EspeciesCadastroPessoas.CPF: 1>
 ```
 
 ## Conceitos

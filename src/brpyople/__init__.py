@@ -1,6 +1,6 @@
 from brpyople.cadastro_pessoas import (
     Registro as RegistroCadastroPessoas,
-    Especies as EspeciesCadastroPessoas
+    EspeciesCadastroPessoas as EspeciesCadastroPessoas
 )
 
 __all__ = [
