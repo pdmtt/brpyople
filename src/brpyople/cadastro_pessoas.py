@@ -35,7 +35,69 @@ class Registro:
     digitação.
     """
 
-    def __init__(self, identificador: str, /) -> None:
+    @staticmethod
+    def gerar_digitos_verificadores(texto: str, cadastro_pessoas: EspeciesCadastroPessoas) -> str:
+        """
+        Gera corretamente os dígitos-verificadores do texto passado, interpretado como um
+        identificador de registro, seguindo o algoritmo do cadastro de pessoas especificado.
+        :param texto: Texto que deve conter a quantidade esperada de dígitos para o identificador do
+            cadastro de pessoas escolhido. Também admite que o texto recebido não tenha os dois
+            últimos dígitos, pois seriam os dígitos-verificadores que serão gerados.
+            Pode conter os separadores, que serão ignorados.
+            Qualquer outro caracter fará a função levantar erro.
+        :param cadastro_pessoas: Qual o cadastro de pessoas a que pertence o identificador contido
+            no texto.
+        """
+        texto_sem_separadores = re.sub(r'[./-]', '', texto)
+
+        # Valida o texto passado
+        try:
+            quantidade_maxima_digitos = {
+                EspeciesCadastroPessoas.CNPJ: 14,
+                EspeciesCadastroPessoas.CPF: 11,
+            }[cadastro_pessoas]
+        except KeyError:
+            raise ValueError('Cadastro de pessoas inesperado')
+
+        if (
+                len(texto_sem_separadores) not in (
+                    quantidade_maxima_digitos,
+                    quantidade_maxima_digitos - 2  # Excluindo os dígitos-verificadores
+                )
+                or not texto_sem_separadores.isdigit()  # Se existir algum caractere não-dígito
+        ):
+            raise ValueError(
+                f'O texto "{texto}" ou não contém a quantidade esperada de dígitos, ou contém pelo '
+                'menos um caractere que não é dígito'
+            )
+
+        # Gera o dígitos-verificadores.
+        if len(texto_sem_separadores) == quantidade_maxima_digitos:
+            # Remove os últimos dois dígitos, os dígitos-verificadores, quando incluídos no texto.
+            identificador_valido = texto_sem_separadores[:-2]
+        else:
+            identificador_valido = texto_sem_separadores
+
+        if cadastro_pessoas == EspeciesCadastroPessoas.CPF:
+            for dv in (0, 1):
+                soma = 0
+                for char, multiplicador in zip(identificador_valido[dv:], range(10, 1, -1)):
+                    soma += int(char) * multiplicador
+                resto = soma % 11
+                identificador_valido += str(11 - resto if resto > 1 else 0)
+
+        else:
+            for _ in (1, 2):
+                mult, soma = 9, 0
+                for c in identificador_valido[::-1]:
+                    soma += int(c) * mult
+                    mult = mult - 1 if mult > 2 else 9
+                resto = soma % 11
+                identificador_valido += str(resto if resto != 10 else 0)
+
+        return identificador_valido[-2:]
+
+    def __init__(self, identificador: str) -> None:
         """
         :param identificador: O identificador do registro no cadastro de pessoas.
         :raise ValueError: Quando o identificador não se adequar ao padrão de nenhum cadastro de
@@ -69,15 +131,6 @@ class Registro:
                 self.digitos_identificador[6:9]
             )) + '-' + self.digitos_identificador[9:11]
 
-            # Valida os dígitos-verificadores do identificador
-            identificador_valido = self.digitos_identificador[:-2]
-            for dv in (0, 1):
-                soma = 0
-                for char, multiplicador in zip(identificador_valido[dv:], range(10, 1, -1)):
-                    soma += int(char) * multiplicador
-                resto = soma % 11
-                identificador_valido += str(11 - resto if resto > 1 else 0)
-
         # CNPJ
         elif (
                 REGEX_CNPJ_COM_SEPARADORES.fullmatch(identificador)
@@ -85,46 +138,24 @@ class Registro:
         ):
             self.cadastro_pessoas = EspeciesCadastroPessoas.CNPJ
 
-            estabelecimento = self.digitos_identificador[8:12]
             self.identificador_formatado = '.'.join((
                 self.digitos_identificador[:2],
                 self.digitos_identificador[2:5],
                 self.digitos_identificador[5:8]
-            )) + f'/{estabelecimento}-{self.digitos_identificador[12:]}'
-
-            # Valida os dígitos-verificadores do identificador
-            identificador_valido = (
-                    self.digitos_identificador[:12]
-                    + self._digitos_verificadores_identificador_cnpj(
-                        raiz=self.digitos_identificador[:8],
-                        estabelecimento=int(estabelecimento)
-                    )
-            )
+            )) + f'/{self.digitos_identificador[8:12]}-{self.digitos_identificador[12:]}'
 
         else:
             raise ValueError(
-                f'O identificador "{identificador}" não segue o padrão de algum cadastro de '
+                f'O identificador "{identificador}" não segue o padrão de qualquer cadastro de '
                 'pessoas'
             )
 
-        self.identificador_valido = identificador_valido == self.digitos_identificador
-
-    @staticmethod
-    def _digitos_verificadores_identificador_cnpj(raiz: str, estabelecimento: int) -> str:
-        """Retorna os dígitos-verificadores do identificador de um registro do CNPJ."""
-        digitos_preditores = str(raiz) + str(estabelecimento).zfill(4)
-        if len(digitos_preditores) != 12 or not digitos_preditores.isdigit():
-            raise ValueError('É necessário um texto contendo apenas 12 dígitos exatamente')
-
-        for _ in (1, 2):
-            mult, soma = 9, 0
-            for c in digitos_preditores[::-1]:
-                soma += int(c) * mult
-                mult = mult - 1 if mult > 2 else 9
-            resto = soma % 11
-            digitos_preditores += str(resto if resto != 10 else 0)
-
-        return digitos_preditores[-2:]
+        # O identificador é considerado válido se os seus dígitos-verificadores tiverem sido gerados
+        # conforme o algoritmo designado para cada cadastro de pessoas.
+        self.identificador_valido = self.gerar_digitos_verificadores(
+            self.digitos_identificador,
+            self.cadastro_pessoas
+        ) == self.digitos_identificador[-2:]
 
     @classmethod
     def de_estabelecimento_com_raiz_cnpj(cls, raiz: str, estabelecimento: int = 1) -> "Registro":
@@ -146,10 +177,11 @@ class Registro:
         if int(estabelecimento) < 1:
             raise ValueError('Não existe estabelecimento menor que 1')
 
+        texto_gerar_digitos = raiz + str(estabelecimento).zfill(4)
+
         return cls(
-            raiz
-            + str(estabelecimento).zfill(4)
-            + cls._digitos_verificadores_identificador_cnpj(raiz, estabelecimento)
+            texto_gerar_digitos
+            + cls.gerar_digitos_verificadores(texto_gerar_digitos, EspeciesCadastroPessoas.CNPJ)
         )
 
     def extrair_raiz_cnpj(self) -> str:

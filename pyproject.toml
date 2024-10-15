@@ -1,6 +1,6 @@
 [project]
 name = "brpyople"
-version = "1.0.0"
+version = "0.0.0" # Só será útil quando o pacote for subido para o PyPI
 requires-python = ">=3.0"
 dependencies = []
 

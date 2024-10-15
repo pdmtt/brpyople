@@ -1,7 +1,7 @@
 """Testa os objetos implementados em brpyople.cadastro_pessoas."""
 import pytest
 
-from brpyople.cadastro_pessoas import Registro, EspeciesCadastroPessoas
+from brpyople import RegistroCadastroPessoas, EspeciesCadastroPessoas
 
 
 @pytest.fixture(params=[
@@ -17,17 +17,18 @@ def dados_identificador_valido(request) -> tuple[str, EspeciesCadastroPessoas, s
     Dados relacionados a um identificador válido.
 
     Tupla contendo três objetos:
-        - Texto contendo identificador para ser passado ao construtor do :class:`Registro`
+        - Texto contendo identificador para ser passado ao construtor
+          do :class:`RegistroCadastroPessoas`
         - O cadastro de pessoas a que pertence o identificador
         - Texto contendo o identificador formatado, ou seja, com separadores
     """
     return request.param[0], request.param[1], request.param[2]
 
 
-def test_registro_valido(dados_identificador_valido) -> None:
+def test_gerar_registro_valido(dados_identificador_valido) -> None:
     identificador, cadastro_pessoas, identificador_formatado = dados_identificador_valido
 
-    registro = Registro(identificador)
+    registro = RegistroCadastroPessoas(identificador)
     assert registro.cadastro_pessoas == cadastro_pessoas
     assert registro.identificador_valido
     assert registro.identificador_formatado == identificador_formatado
@@ -52,10 +53,10 @@ def dados_identificador_invalido(request) -> tuple[str, EspeciesCadastroPessoas]
     return request.param[0], request.param[1]
 
 
-def test_registro_invalido(dados_identificador_invalido) -> None:
+def test_gerar_registro_invalido(dados_identificador_invalido) -> None:
     identificador, cadastro_pessoas = dados_identificador_invalido
 
-    registro = Registro(identificador)
+    registro = RegistroCadastroPessoas(identificador)
     assert registro.cadastro_pessoas == cadastro_pessoas
     assert not registro.identificador_valido
 
@@ -77,16 +78,19 @@ def dados_fabrica_usando_raiz_cnpj(request) -> tuple[str, int, str]:
     return request.param
 
 
-def test_registro_estabelecimento_com_raiz_cnpj(dados_fabrica_usando_raiz_cnpj):
+def test_fabricar_registro_de_estabelecimento_com_raiz_cnpj(
+        dados_fabrica_usando_raiz_cnpj
+):
     raiz_identificador, n_estabelecimento, identificador_formatado = dados_fabrica_usando_raiz_cnpj
 
     with pytest.raises(ValueError):
-        Registro(raiz_identificador)
+        RegistroCadastroPessoas(raiz_identificador)
 
-    registro = Registro.de_estabelecimento_com_raiz_cnpj(
+    registro = RegistroCadastroPessoas.de_estabelecimento_com_raiz_cnpj(
         raiz=raiz_identificador,
         estabelecimento=n_estabelecimento
     )
 
+    assert registro.identificador_valido
     assert registro.identificador_formatado == identificador_formatado
     assert registro.extrair_raiz_cnpj() == raiz_identificador
