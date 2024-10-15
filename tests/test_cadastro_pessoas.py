@@ -83,7 +83,10 @@ def test_registro_estabelecimento_com_raiz_cnpj(dados_fabrica_usando_raiz_cnpj):
     with pytest.raises(ValueError):
         Registro(raiz_identificador)
 
-    assert Registro.estabelecimento_com_raiz_cnpj(
+    registro = Registro.de_estabelecimento_com_raiz_cnpj(
         raiz=raiz_identificador,
         estabelecimento=n_estabelecimento
-    ).identificador_formatado == identificador_formatado
+    )
+
+    assert registro.identificador_formatado == identificador_formatado
+    assert registro.extrair_raiz_cnpj() == raiz_identificador

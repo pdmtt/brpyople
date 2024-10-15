@@ -10,6 +10,7 @@ REGEX_CPF_COM_SEPARADORES = re.compile(r'\d{3}\.\d{3}\.\d{3}-\d{2}')
 REGEX_CPF_SEM_SEPARADORES = re.compile(r'\d{3}\d{3}\d{3}\d{2}')
 REGEX_CNPJ_COM_SEPARADORES = re.compile(r'\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}')
 REGEX_CNPJ_SEM_SEPARADORES = re.compile(r'\d{2}\d{3}\d{3}\d{4}\d{2}')
+REGEX_RAIZ_CNPJ = re.compile(r'\d{8}')
 
 
 class EspeciesCadastroPessoas(Enum):
@@ -94,7 +95,7 @@ class Registro:
             # Valida os dígitos-verificadores do identificador
             identificador_valido = (
                     self.digitos_identificador[:12]
-                    + self._digitos_verificadores_identificador_registro_cnpj(
+                    + self._digitos_verificadores_identificador_cnpj(
                         raiz=self.digitos_identificador[:8],
                         estabelecimento=int(estabelecimento)
                     )
@@ -109,7 +110,7 @@ class Registro:
         self.identificador_valido = identificador_valido == self.digitos_identificador
 
     @staticmethod
-    def _digitos_verificadores_identificador_registro_cnpj(raiz: str, estabelecimento: int) -> str:
+    def _digitos_verificadores_identificador_cnpj(raiz: str, estabelecimento: int) -> str:
         """Retorna os dígitos-verificadores do identificador de um registro do CNPJ."""
         digitos_preditores = str(raiz) + str(estabelecimento).zfill(4)
         if len(digitos_preditores) != 12 or not digitos_preditores.isdigit():
@@ -126,7 +127,7 @@ class Registro:
         return digitos_preditores[-2:]
 
     @classmethod
-    def estabelecimento_com_raiz_cnpj(cls, raiz: str, estabelecimento: int = 1) -> "Registro":
+    def de_estabelecimento_com_raiz_cnpj(cls, raiz: str, estabelecimento: int = 1) -> "Registro":
         """
         Fábrica que retorna um :class:`Registro` do CNPJ e com identificador válido contendo
         a raiz e o estabelecimento requisitado.
@@ -148,5 +149,21 @@ class Registro:
         return cls(
             raiz
             + str(estabelecimento).zfill(4)
-            + cls._digitos_verificadores_identificador_registro_cnpj(raiz, estabelecimento)
+            + cls._digitos_verificadores_identificador_cnpj(raiz, estabelecimento)
         )
+
+    def extrair_raiz_cnpj(self) -> str:
+        """
+        Retorna um texto contendo somente os oito primeiros dígitos do identificador do registro, se
+        ele for vinculado ao CNPJ.
+
+        Todos os identificadores vinculados a uma mesma entidade cadastrada no CNPJ têm a mesma
+        raiz.
+        :raise ValueError: Se o registro não pertencer ao CNPJ.
+        """
+        if self.cadastro_pessoas is not EspeciesCadastroPessoas.CNPJ:
+            raise ValueError(
+                'Somente registros vinculados ao CNPJ podem ter a raiz do seu identificador '
+                'extraída'
+            )
+        return self.digitos_identificador[:8]
