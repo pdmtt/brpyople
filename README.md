@@ -34,5 +34,17 @@ Além disso, os dígitos finais, tanto no CPF, quanto no CNPJ, são calculados a
 anteriores, usando algum algoritmo pré-determinado, assim possibilitando a identificação de
 erros de digitação.
 
+### Cadastro de Pessoas Físicas (CPF)
+Nos termos da Instrução Normativa RFB nº 2172:
+> O CPF é o banco de dados nacional que contém informações individualizadas de pessoas físicas
+> brasileiras e estrangeiras, residentes e não residentes no Brasil.
+
+Apenas um identificador único é atribuído à pessoa física inscrita no CPF. Esse identificador segue
+o seguinte padrão: `NNN.NNN.NNN-VV`. A letra `N` representa qualquer dígito e a `V`, dígitos gerados
+a partir de uma função dos dígitos anteriores.
+
+Isso significa que existe apenas uma possibilidade de `VV` para cada sequência de dígitos
+`NNN.NNN.NNN`.
+
 ### Pessoas
 Pessoas são o que está registrado nos cadastros de pessoas.

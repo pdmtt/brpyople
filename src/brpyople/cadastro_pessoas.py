@@ -97,6 +97,33 @@ class Registro:
 
         return identificador_valido[-2:]
 
+    @classmethod
+    def de_estabelecimento_com_raiz_cnpj(cls, raiz: str, estabelecimento: int = 1) -> "Registro":
+        """
+        Fábrica que retorna um :class:`Registro` do CNPJ e com identificador válido contendo
+        a raiz e o estabelecimento requisitado.
+
+        Exemplos:
+            - ('00000000', 1) → <Registro('00.000.000/0001-91')>
+            - ('00000000', 2) → <Registro('00.000.000/0002-72')>
+
+        Os identificadores dos registros do CNPJ seguem o padrão "RR.RRR.RRR/MMMM-VV".
+        Os oitos primeiros dígitos ("R") consistem na "raiz" do identificador.
+        Os quatro seguintes ("M"), "estabelecimento".
+        Os dois últimos ("V"), "dígitos verificadores".
+
+        O estabelecimento "1" é sempre da matriz/sede e os demais, das filiais.
+        """
+        if int(estabelecimento) < 1:
+            raise ValueError('Não existe estabelecimento menor que 1')
+
+        texto_gerar_digitos = raiz + str(estabelecimento).zfill(4)
+
+        return cls(
+            texto_gerar_digitos
+            + cls.gerar_digitos_verificadores(texto_gerar_digitos, EspeciesCadastroPessoas.CNPJ)
+        )
+
     def __init__(self, identificador: str) -> None:
         """
         :param identificador: O identificador do registro no cadastro de pessoas.
@@ -157,32 +184,8 @@ class Registro:
             self.cadastro_pessoas
         ) == self.digitos_identificador[-2:]
 
-    @classmethod
-    def de_estabelecimento_com_raiz_cnpj(cls, raiz: str, estabelecimento: int = 1) -> "Registro":
-        """
-        Fábrica que retorna um :class:`Registro` do CNPJ e com identificador válido contendo
-        a raiz e o estabelecimento requisitado.
-
-        Exemplos:
-            - ('00000000', 1) → <Registro('00.000.000/0001-91')>
-            - ('00000000', 2) → <Registro('00.000.000/0002-72')>
-
-        Os identificadores dos registros do CNPJ seguem o padrão "RR.RRR.RRR/MMMM-VV".
-        Os oitos primeiros dígitos ("R") consistem na "raiz" do identificador.
-        Os quatro seguintes ("M"), "estabelecimento".
-        Os dois últimos ("V"), "dígitos verificadores".
-
-        O estabelecimento "1" é sempre da matriz/sede e os demais, das filiais.
-        """
-        if int(estabelecimento) < 1:
-            raise ValueError('Não existe estabelecimento menor que 1')
-
-        texto_gerar_digitos = raiz + str(estabelecimento).zfill(4)
-
-        return cls(
-            texto_gerar_digitos
-            + cls.gerar_digitos_verificadores(texto_gerar_digitos, EspeciesCadastroPessoas.CNPJ)
-        )
+    def __repr__(self) -> str:
+        return f'{self.__class__.__name__}({self.identificador_formatado})'
 
     def extrair_raiz_cnpj(self) -> str:
         """
